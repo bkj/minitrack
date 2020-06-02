@@ -24,9 +24,16 @@ conda install -y -c pytorch pytorch==1.4.0 torchvision
 python make_data.py
 
 # --
-# Make video
+# Visualize
 
 ffmpeg -r 10 -i frames/frame.%04d.png -vcodec mpeg4 -y test2.mp4
 
 # --
-# Test tracker
+# Train detector
+
+python train_detector.py
+
+# --
+# Test tracker (incomplete)
+
+python tracker.py
