@@ -5,7 +5,7 @@
 conda activate minitrack_env
 
 # --
-# Make frames
+# Generate synthetic data
 
 python make_data.py
 
