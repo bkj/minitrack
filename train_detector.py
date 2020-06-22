@@ -6,6 +6,7 @@
     !! Should train on more realistic data -- training like this means the network can't handle occlusions at all
 """
 
+import json
 import numpy as np
 from PIL import Image
 
@@ -13,47 +14,16 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-class SimpleDetector(nn.Module):
-    def __init__(self, n_channels=16):
-        super().__init__()
-        d = 31
-        
-        self.conv1 = nn.Conv2d(1, n_channels, kernel_size=d, padding=d // 2)
-        self.head  = nn.Conv2d(n_channels, 2, kernel_size=1)
-    
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.head(x)
-        return x
-    
-    def inference(self, x):
-        assert len(x.shape) == 2
-        
-        x = x[None, None]
-        
-        if x.dtype == np.float:
-            x = x / 255
-        
-        x = torch.FloatTensor(x)
-        with torch.no_grad():
-            return self(x)
-
-
-def load_model(weight_path='detector.pth'):
-    model = SimpleDetector()
-    model.load_state_dict(torch.load(weight_path))
-    model = model.eval()
-    return model
-
+from cnn import SimpleDetector
 
 if __name__ == "__main__":
 
     # --
     # IO
 
-    pos = np.array(Image.open('pos.png'))
-    neg = np.array(Image.open('neg.png'))
-    nul = np.array(Image.open('nul.png'))
+    pos = np.array(Image.open('data/pos.png'))
+    neg = np.array(Image.open('data/neg.png'))
+    nul = np.array(Image.open('data/nul.png'))
     
     d = pos.shape[0]
     center = d // 2 + 1
@@ -89,6 +59,6 @@ if __name__ == "__main__":
         p = out.argmax(dim=1) == 1
         recall    = (p & (y == 1)).float().sum() / (y == 1).float().sum()
         precision = (y[p] == 1).float().mean()
-        print(float(precision), float(recall))
+        print(json.dumps({"precision" : float(precision), "recall" : float(recall)}))
 
-    torch.save(model.state_dict(), 'detector.pth')
+    torch.save(model.state_dict(), 'models/detector.pth')

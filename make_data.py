@@ -4,18 +4,25 @@
     make_data.py
 """
 
+import os
 import numpy as np
 from joblib import Parallel, delayed
-
-from rsub import *
 from matplotlib import pyplot as plt
 
-_ = np.random.seed(123)
+# --
+# Parameters
+
+n_traj = 32
+dim    = 800
+n_jobs = 8
+seed   = 123
+
+_ = np.random.seed(seed)
 
 # --
 # Generate data
 
-n_traj = 32
+os.makedirs('data/frames', exist_ok=True)
 
 xys = []
 for _ in range(n_traj):
@@ -29,7 +36,7 @@ for _ in range(n_traj):
     ])
     
     xy = xy * rad + offset
-    xy = (xy * 400).astype(np.int) + 400
+    xy = (xy * dim // 2).astype(np.int) + dim // 2
     
     if np.random.uniform() > 0.5:
         xy = xy[::-1]
@@ -42,19 +49,19 @@ for _ in range(n_traj):
 def plot_frame(frame, n_noise=10):
     rng = np.random.RandomState(frame)
     
-    fig = plt.figure(figsize=(5, 5), dpi=160, frameon=False)
+    fig = plt.figure(figsize=(5, 5), dpi=dim // 5, frameon=False)
     ax  = fig.add_axes([0, 0, 1, 1])
     
     for idx, xy in enumerate(xys):
-        _ = ax.scatter(xy[frame,1], 800 - xy[frame,0], s=20, c='white', marker="x")
+        _ = ax.scatter(xy[frame,1], dim - xy[frame,0], s=20, c='white', marker="x")
     
-    noise = rng.choice(800, (n_noise, 2))
-    _     = ax.scatter(noise[:,1], 800 - noise[:,0], s=20, c='white', marker="s")
+    noise = rng.choice(dim, (n_noise, 2))
+    _     = ax.scatter(noise[:,1], dim - noise[:,0], s=20, c='white', marker="s")
     
     _ = ax.set_facecolor('black')
-    _ = ax.set_xlim(0, 800)
-    _ = ax.set_ylim(0, 800)
-    _ = fig.savefig(f'frames/frame.{frame:04d}.png')
+    _ = ax.set_xlim(0, dim)
+    _ = ax.set_ylim(0, dim)
+    _ = fig.savefig(f'data/frames/frame.{frame:04d}.png')
     _ = plt.close()
 
 
@@ -62,19 +69,18 @@ min_traj = min([xy.shape[0] for xy in xys])
 xys      = [xy[:min_traj] for xy in xys]
 
 jobs     = [delayed(plot_frame)(frame) for frame in range(min_traj)]
-_        = Parallel(backend='multiprocessing', n_jobs=8, verbose=True)(jobs)
+_        = Parallel(backend='multiprocessing', n_jobs=n_jobs, verbose=True)(jobs)
 
 # --
 # Save ground truth
 
 gt = [np.column_stack([np.arange(xy.shape[0]), xy, np.repeat(i, xy.shape[0])]) for i, xy in enumerate(xys)]
 gt = np.row_stack(gt)
-sel = (
-    (gt[:,1] < 800) &
+gt = gt[(
+    (gt[:,1] < dim) &
     (gt[:,1] >= 0)  &
-    (gt[:,2] < 800) &
+    (gt[:,2] < dim) &
     (gt[:,2] >= 0)
-)
-gt = gt[sel]
-np.save('gt.npy', gt)
+)]
+np.save('data/gt.npy', gt)
 
